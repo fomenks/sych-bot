@@ -265,9 +265,15 @@ async function processMessage(bot, msg) {
 
   // === НАБЛЮДАТЕЛЬ ===
   if (!analysisBuffers[chatId]) analysisBuffers[chatId] = [];
+  
+  // Собираем полную инфу о юзере для лога
   const senderName = msg.from.first_name || "User";
+  const senderUsername = msg.from.username ? `@${msg.from.username}` : "";
+  const displayName = senderUsername ? `${senderName} (${senderUsername})` : senderName;
+
   if (!text.startsWith('/')) {
-      analysisBuffers[chatId].push({ userId, name: senderName, text });
+      // Пишем в буфер более понятное имя
+      analysisBuffers[chatId].push({ userId, name: displayName, text });
   }
   if (analysisBuffers[chatId].length >= BUFFER_SIZE) {
       processBuffer(chatId); 
