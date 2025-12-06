@@ -117,13 +117,24 @@ async function processMessage(bot, msg) {
 
     // === ЕДИНЫЙ КОНТРОЛЛЕР СТАТУСА "ПЕЧАТАЕТ" ===
     let typingTimer = null;
+    let safetyTimeout = null; // Предохранитель
+
+    const stopTyping = () => {
+        if (typingTimer) {
+            clearInterval(typingTimer);
+            typingTimer = null;
+        }
+        if (safetyTimeout) {
+            clearTimeout(safetyTimeout);
+            safetyTimeout = null;
+        }
+    };
 
     const startTyping = () => {
-        if (typingTimer) return; 
+        if (typingTimer) return; // Уже печатает
 
         const sendAction = () => {
-            // [FIX] Развилка: Если threadId существует (число) — шлем с опциями.
-            // Если null — шлем БЕЗ опций (критично для обычных групп).
+            // Шлем action с учетом треда
             if (threadId) {
                 bot.sendChatAction(chatId, 'typing', { message_thread_id: threadId }).catch(() => {});
             } else {
@@ -131,15 +142,15 @@ async function processMessage(bot, msg) {
             }
         };
 
-        sendAction();
-        typingTimer = setInterval(sendAction, 4000);
-    };
+        sendAction(); // Шлем первый раз сразу
+        typingTimer = setInterval(sendAction, 4000); // Повторяем каждые 4 сек
 
-    const stopTyping = () => {
-        if (typingTimer) {
-            clearInterval(typingTimer);
-            typingTimer = null;
-        }
+        // !!! ЗАЩИТА ОТ ВЕЧНОГО ПЕЧАТАНИЯ !!!
+        // Если через 60 секунд мы все еще печатаем — вырубаем принудительно.
+        safetyTimeout = setTimeout(() => {
+            console.log(`[TYPING SAFETY] Принудительная остановка тайпинга в ${chatId}`);
+            stopTyping();
+        }, 20000);
     };
 
     const command = text.trim().split(/[\s@]+/)[0].toLowerCase(); 
@@ -333,6 +344,11 @@ async function processMessage(bot, msg) {
     return; // Полный игнор
   }
 
+  // === ТЕПЕРЬ, КОГДА МЫ ТОЧНО НЕ В МУТЕ ===
+  if (isDirectlyCalled) {
+    startTyping(); 
+  }
+
   // [FIX] Сначала определяем, обращаются ли к нам, а потом проверяем Mute.
   const cleanText = text.toLowerCase();
 
@@ -344,14 +360,7 @@ async function processMessage(bot, msg) {
   const hasTriggerWord = config.triggerRegex.test(cleanText); 
   
   // 3. Итоговое решение: зовут ли нас?
-  // 3. Итоговое решение: зовут ли нас?
   const isDirectlyCalled = hasTriggerWord || isReplyToBot; 
-
-  // !!! МОМЕНТАЛЬНАЯ РЕАКЦИЯ !!!
-  // Запускаем статус "печатает" только если мы РЕАЛЬНО собираемся отвечать или думать
-  if (isDirectlyCalled) {
-    startTyping(); 
-  }
 
   addToHistory(chatId, senderName, text);
 
