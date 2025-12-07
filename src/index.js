@@ -63,13 +63,21 @@ bot.on('message', async (msg) => {
 
           // 2. Если Админа нет (left, kicked) или он не участник
           if (!allowedStatuses.includes(adminMember.status)) {
-            console.log(`[SECURITY] ⛔ Обнаружен чат без Админа: "${chatTitle}" (ID: ${chatId}).`);
-            console.log(`[SECURITY] Статус админа: ${adminMember.status}. Покидаю чат...`);
-            // Пытаемся попрощаться. Если не вышло (уже кикнули) — пофиг, глушим ошибку.
-            await bot.sendMessage(chatId, "⛔ Хозяина (Admin ID) нет в этом чате. ББ.").catch(() => {});
-            // Пытаемся выйти. Если уже вышли — тоже пофиг.
+            console.log(`[SECURITY] ⛔ Обнаружен чат без Админа...`);
+            
+            // ВОТ ТУТ МЕНЯЕМ СООБЩЕНИЕ
+            const phrases = [
+                "Так, стопэ. Админа не вижу. Благотворительности не будет, я уёбываю!",
+                "Опа, куда это меня занесло? Бати рядом нет, так что я уёбываю!",
+                "Вы че думали, украли бота? Я не работаю в беспризорных приютах. Я уёбываю!",
+                "⚠️ ERROR: ADMIN NOT FOUND. Включаю протокол самоуважения. Я уёбываю!",
+                "Не, ну вы видели? Затащили без спроса. Ну вас нахер, я уёбываю!"
+            ];
+            const randomPhrase = phrases[Math.floor(Math.random() * phrases.length)];
+
+            await bot.sendMessage(chatId, randomPhrase).catch(() => {});
             await bot.leaveChat(chatId).catch(() => {});
-            return; // Прерываем обработку
+            return; 
         }
       } catch (e) {
           // Если мы даже не можем проверить админа (например, бот забанен или нет прав), лучше уйти
